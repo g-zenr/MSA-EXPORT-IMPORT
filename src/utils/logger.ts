@@ -1,4 +1,14 @@
-import { createLogger, format, transports } from "winston";
+import { createLogger, format, transports, transport } from "winston";
+
+const loggerTransports: transport[] = [new transports.Console()];
+
+// Only add file transports if not running in serverless (Vercel)
+if (process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production") {
+  loggerTransports.push(
+    new transports.File({ filename: "logs/error.log", level: "error" }),
+    new transports.File({ filename: "logs/combined.log" })
+  );
+}
 
 export const logger = createLogger({
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -8,11 +18,7 @@ export const logger = createLogger({
     format.splat(),
     format.json()
   ),
-  transports: [
-    new transports.Console(),
-    new transports.File({ filename: "logs/error.log", level: "error" }),
-    new transports.File({ filename: "logs/combined.log" }),
-  ],
+  transports: loggerTransports,
   exitOnError: false,
 });
 
