@@ -58,14 +58,17 @@ app.get("/health", (req: Request, res: Response) => {
 // Error handling
 app.use(errorHandler);
 
-const PORT = config.port || 3000;
-const server = app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-});
-
-// Optimize server settings
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;
-server.maxHeadersCount = 1000;
-
 export default app;
+
+// Only start the server if not running in a serverless environment
+if (require.main === module) {
+  const PORT = config.port || 3000;
+  const server = app.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT}`);
+  });
+
+  // Optimize server settings
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
+  server.maxHeadersCount = 1000;
+}
