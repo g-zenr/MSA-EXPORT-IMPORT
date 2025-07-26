@@ -16,6 +16,25 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(compression({ level: 6, threshold: 1024 }));
 
+// CORS middleware for testing - allows all origins
+app.use((req: Request, res: Response, next) => {
+  // Allow all origins for testing
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With"
+  );
+  res.header("Access-Control-Allow-Credentials", "false");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Optimized body parsing
 app.use(
   express.json({
