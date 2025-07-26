@@ -20,4 +20,4 @@ app.get("/", (req, res) => {
 
 const handler = serverless(app);
 
-module.exports = { handler };
+exports.handler = handler;

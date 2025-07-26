@@ -21,4 +21,4 @@ app.use("/", exportRoutes);
 
 const handler = serverless(app);
 
-module.exports = { handler };
+exports.handler = handler;
