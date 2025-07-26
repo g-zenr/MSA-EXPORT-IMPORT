@@ -1,13 +1,15 @@
 {
   "main": "dist/app.js",
   "scripts": {
-    "start": "node --max-old-space-size=4096 --optimize-for-size dist/app.js",
+    "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
-    "build": "tsc",
+    "build": "tsc && npm run build:functions",
+    "build:functions": "tsc --project tsconfig.functions.json",
     "test": "jest",
     "benchmark": "node dist/benchmarks/performance.test.js"
   },
   "dependencies": {
+    "@netlify/functions": "^2.0.0",
     "@types/jimp": "^0.2.1",
     "buffer": "^6.0.3",
     "compression": "^1.7.4",
@@ -22,6 +24,7 @@
     "joi": "^17.9.2",
     "multer": "^1.4.5-lts.1",
     "pdfkit": "^0.13.0",
+    "serverless-http": "^3.2.0",
     "stream": "^0.0.2",
     "winston": "^3.10.0"
   },
