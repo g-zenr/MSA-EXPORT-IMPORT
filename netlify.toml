@@ -1,6 +1,7 @@
 [build]
   functions = "netlify/functions"
   publish = "public"
+  base = "."
 
 [build.environment]
   NODE_VERSION = "18"

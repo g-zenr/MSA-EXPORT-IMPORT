@@ -1,10 +1,11 @@
-import { Handler } from "@netlify/functions";
-import serverless from "serverless-http";
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import compression from "compression";
-import exportRoutes from "../../src/routes/export";
+const serverless = require("serverless-http");
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const compression = require("compression");
+
+// Import the compiled routes
+const exportRoutes = require("../../dist/routes/export");
 
 const app = express();
 
@@ -20,4 +21,4 @@ app.use("/", exportRoutes);
 
 const handler = serverless(app);
 
-export { handler };
+module.exports = { handler };

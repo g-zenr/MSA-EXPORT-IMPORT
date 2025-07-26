@@ -3,8 +3,7 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
-    "build": "tsc && npm run build:functions",
-    "build:functions": "tsc --project tsconfig.functions.json",
+    "build": "tsc",
     "test": "jest",
     "benchmark": "node dist/benchmarks/performance.test.js"
   },

@@ -1,7 +1,8 @@
-import { Handler } from "@netlify/functions";
-import serverless from "serverless-http";
-import express from "express";
-import performance from "../../src/utils/performance";
+const serverless = require("serverless-http");
+const express = require("express");
+
+// Import the compiled performance utility
+const performance = require("../../dist/utils/performance");
 
 const app = express();
 
@@ -19,4 +20,4 @@ app.get("/", (req, res) => {
 
 const handler = serverless(app);
 
-export { handler };
+module.exports = { handler };
