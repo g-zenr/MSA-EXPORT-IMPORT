@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Export API Tester</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial,
+          sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #555;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      textarea {
+        height: 120px;
+        font-family: monospace;
+        resize: vertical;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 25px;
+      }
+      button {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .btn-csv {
+        background: #27ae60;
+        color: white;
+      }
+      .btn-pdf {
+        background: #e74c3c;
+        color: white;
+      }
+      .btn-svg {
+        background: #3498db;
+        color: white;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+        display: none;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .sample-data {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-family: monospace;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Export API Tester</h1>
+
+      <div class="form-group">
+        <label for="serverUrl">Server URL:</label>
+        <input
+          type="text"
+          id="serverUrl"
+          value="http://localhost:3000"
+          placeholder="http://localhost:3000"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="filename">Filename (optional):</label>
+        <input
+          type="text"
+          id="filename"
+          placeholder="my_export"
+          value="test_export"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="title">Title (optional):</label>
+        <input
+          type="text"
+          id="title"
+          placeholder="Data Export"
+          value="Sample Data Export"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="testData">Test Data (JSON Array):</label>
+        <textarea id="testData" placeholder="Enter JSON array..."></textarea>
+        <div class="sample-data">
+          Sample data is pre-loaded. You can modify it or paste your own JSON
+          array.
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-csv" onclick="exportData('csv')">
+          📄 Export CSV
+        </button>
+        <button class="btn-pdf" onclick="exportData('pdf')">
+          📋 Export PDF (HTML)
+        </button>
+        <button class="btn-svg" onclick="exportData('image')">
+          🖼️ Export SVG
+        </button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </div>
+
+    <script>
+      // Pre-load sample data
+      document.getElementById("testData").value = JSON.stringify(
+        [
+          {
+            name: "John Doe",
+            age: 30,
+            city: "New York",
+            department: "Engineering",
+            salary: 75000,
+          },
+          {
+            name: "Jane Smith",
+            age: 25,
+            city: "Los Angeles",
+            department: "Marketing",
+            salary: 65000,
+          },
+          {
+            name: "Bob Johnson",
+            age: 35,
+            city: "Chicago",
+            department: "Sales",
+            salary: 70000,
+          },
+          {
+            name: "Alice Brown",
+            age: 28,
+            city: "Houston",
+            department: "HR",
+            salary: 60000,
+          },
+          {
+            name: "Charlie Wilson",
+            age: 32,
+            city: "Phoenix",
+            department: "Engineering",
+            salary: 80000,
+          },
+        ],
+        null,
+        2
+      );
+
+      function showStatus(message, isError = false) {
+        const status = document.getElementById("status");
+        status.textContent = message;
+        status.className = `status ${isError ? "error" : "success"}`;
+        status.style.display = "block";
+
+        setTimeout(() => {
+          status.style.display = "none";
+        }, 5000);
+      }
+
+      function disableButtons(disabled) {
+        const buttons = document.querySelectorAll("button");
+        buttons.forEach((btn) => (btn.disabled = disabled));
+      }
+
+      async function exportData(format) {
+        const serverUrl = document.getElementById("serverUrl").value.trim();
+        const filename = document.getElementById("filename").value.trim();
+        const title = document.getElementById("title").value.trim();
+        const testDataText = document.getElementById("testData").value.trim();
+
+        if (!serverUrl) {
+          showStatus("Please enter a server URL", true);
+          return;
+        }
+
+        if (!testDataText) {
+          showStatus("Please enter test data", true);
+          return;
+        }
+
+        let testData;
+        try {
+          testData = JSON.parse(testDataText);
+          if (!Array.isArray(testData)) {
+            throw new Error("Data must be an array");
+          }
+        } catch (error) {
+          showStatus(`Invalid JSON data: ${error.message}`, true);
+          return;
+        }
+
+        disableButtons(true);
+        showStatus(`Exporting as ${format.toUpperCase()}...`);
+
+        const endpoint = `${serverUrl}/api/v1/export/${
+          format === "image" ? "image" : format === "pdf" ? "pdf" : "csv"
+        }`;
+
+        const requestData = {
+          data: testData,
+          config: {
+            filename: filename || `export_${Date.now()}`,
+            title: title || "Data Export",
+          },
+        };
+
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server error: ${response.status} - ${errorText}`);
+          }
+
+          // Get the blob and create download
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${filename || "export"}.${
+            format === "image" ? "svg" : format === "pdf" ? "html" : "csv"
+          }`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          showStatus(
+            `✅ ${format.toUpperCase()} export completed successfully!`
+          );
+        } catch (error) {
+          console.error("Export error:", error);
+          showStatus(`❌ Export failed: ${error.message}`, true);
+        } finally {
+          disableButtons(false);
+        }
+      }
+
+      // Test server connection on page load
+      window.addEventListener("load", async () => {
+        const serverUrl = document.getElementById("serverUrl").value;
+        try {
+          const response = await fetch(`${serverUrl}api/v1/export/stats`);
+          if (response.ok) {
+            showStatus("✅ Server connection successful!");
+          } else {
+            showStatus("⚠️ Server responded but may have issues", true);
+          }
+        } catch (error) {
+          showStatus(
+            "❌ Cannot connect to server. Make sure it's running and CORS is enabled.",
+            true
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

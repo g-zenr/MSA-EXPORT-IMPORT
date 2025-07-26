@@ -5,6 +5,8 @@ import { promisify } from "util";
 import config from "../config/config";
 import Saga from "../utils/saga";
 import { logger } from "../utils/logger";
+import { HtmlTemplateGenerator, SvgTemplateGenerator } from "../templates";
+import Jimp from "jimp";
 
 const pipelineAsync = promisify(pipeline);
 
@@ -26,6 +28,7 @@ interface ExportConfig {
   format?: string;
   quality?: number;
   chunkSize?: number;
+  imageFormat?: "svg" | "png"; // New option for image format
 }
 
 class ExportController {
@@ -216,101 +219,19 @@ class ExportController {
           htmlStream = new PassThrough();
           htmlStream.pipe(res);
 
-          // Professional CSS matching the image export theme
-          const htmlHeader = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    @page{size:${userConfig.pageSize || "A4"};margin:${
-            userConfig.margin || 15
-          }mm}
-    body{font:13px/1.5 'Inter','Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff}
-    .container{max-width:100%;overflow-x:auto;padding:20px}
-    h1{font-size:20px;text-align:center;margin:0 0 30px;color:#1e293b;font-weight:600;letter-spacing:0.5}
-    .table-wrapper{overflow-x:auto;margin:20px 0}
-    table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;table-layout:auto;border-radius:8px;overflow:hidden}
-    th{background:linear-gradient(135deg,#4f46e5 0%,#3730a3 100%);color:#fff;font-weight:600;padding:16px 24px;text-align:left;position:sticky;top:0;font-size:14px;letter-spacing:0.3}
-    td{padding:16px 24px;border-bottom:1px solid #e2e8f0;word-wrap:break-word;max-width:200px;font-size:13px}
-    tr:nth-child(even){background:#f8fafc}
-    tr:nth-child(odd){background:#ffffff}
-    tr:hover{background:#f1f5f9}
-    .footer{margin-top:20px;text-align:center;font-size:11px;color:#64748b;font-weight:500;padding:16px;background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);border-radius:8px}
-    @media print{
-      body{margin:0;-webkit-print-color-adjust:exact}
-      .no-print{display:none}
-      table{page-break-inside:auto}
-      tr{page-break-inside:avoid;page-break-after:auto}
-      thead{display:table-header-group}
-      th{background:#4f46e5 !important;color:#fff !important}
-    }
-    @media screen and (max-width:768px){
-      table{font-size:12px}
-      th,td{padding:12px 16px}
-      .container{padding:10px}
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>${title}</h1>
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>${headers
-            .map((h) => `<th>${String(h).substring(0, 50)}</th>`)
-            .join("")}</tr>
-        </thead>
-        <tbody>`;
+          // Use the new template system for clean, maintainable code
+          const templateGenerator = new HtmlTemplateGenerator(userConfig);
+          const tableData = {
+            title,
+            headers,
+            rows: data,
+            totalRecords: data.length,
+            generatedDate: new Date().toLocaleDateString(),
+          };
 
-          htmlStream.write(htmlHeader);
-
-          // Stream table rows in chunks for memory efficiency
-          for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.slice(i, i + chunkSize);
-            const rowsHtml = chunk
-              .map((row) => {
-                const cells = headers
-                  .map((header) => {
-                    const value = row?.[header] ?? "";
-                    // Escape HTML and limit length for performance
-                    const escapedValue = String(value)
-                      .substring(0, 200)
-                      .replace(/&/g, "&amp;")
-                      .replace(/</g, "&lt;")
-                      .replace(/>/g, "&gt;")
-                      .replace(/"/g, "&quot;");
-                    return `<td>${escapedValue}</td>`;
-                  })
-                  .join("");
-                return `<tr>${cells}</tr>`;
-              })
-              .join("");
-
-            htmlStream.write(rowsHtml);
-
-            // Yield control periodically for large datasets
-            if (i % (chunkSize * 5) === 0) {
-              await new Promise((resolve) => setImmediate(resolve));
-            }
-          }
-
-          const htmlFooter = `
-        </tbody>
-      </table>
-    </div>
-    <div class="footer">
-      Generated: ${new Date().toLocaleDateString()} | Total records: ${data.length.toLocaleString()}
-    </div>
-  </div>
-</body>
-</html>`;
-
-          htmlStream.write(htmlFooter);
-          htmlStream.end();
+          const completeHtml = templateGenerator.generateHtml(tableData);
+          htmlStream!.write(completeHtml);
+          htmlStream!.end();
 
           logger.info(`PDF export completed: ${logId}`);
         },
@@ -339,7 +260,7 @@ class ExportController {
     next: NextFunction
   ): Promise<void> => {
     const saga = new Saga();
-    let svgStream: PassThrough | null = null;
+    let imageStream: PassThrough | null = null;
     let logId: string | null = null;
 
     try {
@@ -353,152 +274,102 @@ class ExportController {
       }
 
       const filename = userConfig.filename || `export_${Date.now()}`;
-      const baseWidth = Math.max(userConfig.width || 1200, 800); // Minimum width of 800px
-      const backgroundColor = userConfig.backgroundColor || "#ffffff";
+      const baseWidth = Math.max(userConfig.width || 1200, 800);
       const title = userConfig.title || "Data Export";
       const headers =
         userConfig.headers || (data.length > 0 ? Object.keys(data[0]) : []);
+      const imageFormat = userConfig.imageFormat || "svg"; // Default to SVG
 
       saga.addStep(
         async () => {
-          logId = `svg_${Date.now()}_${Math.random()
+          logId = `${imageFormat}_${Date.now()}_${Math.random()
             .toString(36)
             .substr(2, 9)}`;
-          logger.info(`SVG export started: ${logId}, records: ${data.length}`);
+          logger.info(
+            `${imageFormat.toUpperCase()} export started: ${logId}, records: ${
+              data.length
+            }`
+          );
 
-          this.setDownloadHeaders(res, "image/svg+xml", `${filename}.svg`);
-
-          svgStream = new PassThrough();
-          svgStream.pipe(res);
-
-          // Dynamic calculations to fit ALL data with better spacing
-          const rowHeight = 40; // Increased from 28
-          const headerHeight = 50; // Increased from 35
-          const startY = 140; // Increased from 80
-          const padding = 30; // Increased from 20
-          const footerHeight = 50; // Increased from 40
+          // Use the new SVG template system for clean, maintainable code
+          const svgTemplateGenerator = new SvgTemplateGenerator(userConfig);
+          const tableData = {
+            title,
+            headers,
+            rows: data,
+            totalRecords: data.length,
+            generatedDate: new Date().toLocaleDateString(),
+          };
 
           // Calculate dynamic height based on data length
+          const rowHeight = 40;
+          const headerHeight = 50;
+          const startY = 140;
+          const footerHeight = 50;
           const dynamicHeight =
             startY + headerHeight + data.length * rowHeight + footerHeight;
           const height = Math.max(dynamicHeight, userConfig.height || 800);
           const width = baseWidth;
 
-          // Use full width for columns - distribute evenly
-          const availableWidth = width - padding * 2;
-          const columnWidth = Math.max(100, availableWidth / headers.length);
+          if (imageFormat === "svg") {
+            // SVG Export
+            this.setDownloadHeaders(res, "image/svg+xml", `${filename}.svg`);
+            imageStream = new PassThrough();
+            imageStream.pipe(res);
 
-          // Use ALL data instead of limiting
-          const visibleData = data;
-
-          // SVG header with professional designer styling
-          const svgHeader = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" 
-     viewBox="0 0 ${width} ${height}" style="background:${backgroundColor}">
-  <defs>
-    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#475569;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="rowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Background with subtle pattern -->
-  <rect width="100%" height="100%" fill="${backgroundColor}"/>
-  <rect width="100%" height="100%" fill="url(#titleGradient)" opacity="0.02"/>
-  
-  <!-- Title with clean professional styling -->
-  <text x="${
-    width / 2
-  }" y="67" fill="#1e293b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="20px" font-weight="600" text-anchor="middle" letter-spacing="0.5">${title.substring(
-            0,
-            100
-          )}</text>`;
-
-          svgStream.write(svgHeader);
-
-          // Header row with clean professional styling
-          svgStream!.write(`
-  <rect x="${padding}" y="${startY - headerHeight}" width="${
-            headers.length * columnWidth
-          }" 
-        height="${headerHeight}" fill="url(#headerGradient)" stroke="#3730a3" stroke-width="1" rx="8"/>`);
-
-          // Column headers with professional typography and better spacing
-          headers.forEach((header, index) => {
-            const headerText = String(header).substring(
-              0,
-              Math.floor(columnWidth / 8)
+            const completeSvg = svgTemplateGenerator.generateSvg(
+              tableData,
+              width,
+              height
             );
-            svgStream!.write(`
-  <text x="${padding + 24 + index * columnWidth}" y="${
-              startY - 15
-            }" fill="#ffffff" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="14px" font-weight="600" letter-spacing="0.3">${headerText}</text>`);
-          });
+            imageStream!.write(completeSvg);
+            imageStream!.end();
 
-          // Data rows with professional designer styling
-          visibleData.forEach((row, rowIndex) => {
-            const yPos = startY + rowIndex * rowHeight;
-            const isAltRow = rowIndex % 2 === 1;
-            const bgColor = isAltRow ? "#f8fafc" : "#ffffff";
-            const textColor = "#1e293b";
-            const borderColor = isAltRow ? "#e2e8f0" : "#f1f5f9";
+            logger.info(`SVG export completed: ${logId}`);
+          } else if (imageFormat === "png") {
+            // PNG Export - Convert SVG to PNG
+            this.setDownloadHeaders(res, "image/png", `${filename}.png`);
+            imageStream = new PassThrough();
+            imageStream.pipe(res);
 
-            // Row background with professional styling
-            svgStream!.write(`
-  <rect x="${padding}" y="${yPos}" width="${headers.length * columnWidth}" 
-        height="${rowHeight}" fill="${bgColor}" stroke="${borderColor}" stroke-width="0.5" rx="6"/>`);
+            const completeSvg = svgTemplateGenerator.generateSvg(
+              tableData,
+              width,
+              height
+            );
 
-            // Cell data with professional typography and generous spacing
-            headers.forEach((header, colIndex) => {
-              const value = row?.[header] ?? "";
-              const cellText = String(value).substring(
-                0,
-                Math.floor(columnWidth / 8)
-              );
-              const xPos = padding + 24 + colIndex * columnWidth;
+            // Convert SVG to PNG using Jimp
+            const svgBuffer = Buffer.from(completeSvg, "utf-8");
 
-              svgStream!.write(`
-  <text x="${xPos}" y="${
-                yPos + 28
-              }" fill="${textColor}" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="13px" font-weight="400">${cellText}</text>`);
-            });
-          });
+            // Create a new image with the SVG content
+            const image = new Jimp(width, height, 0xffffffff); // White background
 
-          // Footer with clean professional styling and better spacing
-          const svgFooter = `
-  <rect x="${padding}" y="${height - 50}" width="${width - padding * 2}" 
-        height="40" fill="url(#rowGradient)" stroke="#e2e8f0" stroke-width="0.5" rx="8"/>
-  <text x="${width - padding - 24}" y="${
-            height - 25
-          }" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="12px" font-weight="500" text-anchor="end">
-    Total records: ${data.length.toLocaleString()}
-  </text> 
-  <text x="${padding + 24}" y="${
-            height - 25
-          }" fill="#64748b" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="12px" font-weight="500">
-    Generated: ${new Date().toLocaleDateString()}
-  </text>
-</svg>`;
+            // For PNG, we'll create a simple representation
+            // Note: Jimp doesn't directly support SVG rendering, so we'll create a PNG with the table data
+            const pngImage = await this.createPngFromData(
+              tableData,
+              width,
+              height,
+              userConfig
+            );
+            const pngBuffer = await pngImage.getBufferAsync(Jimp.MIME_PNG);
 
-          svgStream.write(svgFooter);
-          svgStream.end();
+            imageStream!.write(pngBuffer);
+            imageStream!.end();
 
-          logger.info(`SVG export completed: ${logId}`);
+            logger.info(`PNG export completed: ${logId}`);
+          }
         },
         async () => {
-          if (svgStream && !svgStream.destroyed) {
-            svgStream.destroy();
+          if (imageStream && !imageStream.destroyed) {
+            imageStream.destroy();
           }
           if (logId) {
-            logger.warn(`SVG export compensation executed: ${logId}`);
+            logger.warn(
+              `${
+                imageFormat?.toUpperCase() || "IMAGE"
+              } export compensation executed: ${logId}`
+            );
           }
         }
       );
@@ -511,6 +382,90 @@ class ExportController {
       }
     }
   };
+
+  // Helper method to create PNG from table data
+  private async createPngFromData(
+    tableData: any,
+    width: number,
+    height: number,
+    config: ExportConfig
+  ): Promise<Jimp> {
+    const { title, headers, rows, totalRecords, generatedDate } = tableData;
+    const backgroundColor = config.backgroundColor || "#ffffff";
+    const image = new Jimp(width, height, this.hexToRgb(backgroundColor));
+
+    // Add title
+    if (title) {
+      const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
+      const titleWidth = Jimp.measureText(font, title);
+      const titleX = (width - titleWidth) / 2;
+      image.print(font, titleX, 20, title);
+    }
+
+    // Add headers
+    const headerFont = await Jimp.loadFont(Jimp.FONT_SANS_14_BLACK);
+    const cellFont = await Jimp.loadFont(Jimp.FONT_SANS_12_BLACK);
+    const rowHeight = 30;
+    const headerY = 80;
+    const cellPadding = 10;
+
+    // Draw header background
+    const headerBgColor = this.hexToRgb("#4f46e5");
+    for (let x = 0; x < width; x++) {
+      for (let y = headerY; y < headerY + rowHeight; y++) {
+        image.setPixelColor(headerBgColor, x, y);
+      }
+    }
+
+    // Draw headers
+    const columnWidth = Math.floor((width - 40) / headers.length);
+    headers.forEach((header: string, index: number) => {
+      const x = 20 + index * columnWidth;
+      const headerText = String(header).substring(0, 20);
+      image.print(headerFont, x + cellPadding, headerY + 8, headerText);
+    });
+
+    // Draw data rows
+    rows.forEach((row: any, rowIndex: number) => {
+      const y = headerY + rowHeight + rowIndex * rowHeight;
+      const bgColor =
+        rowIndex % 2 === 1
+          ? this.hexToRgb("#f8fafc")
+          : this.hexToRgb("#ffffff");
+
+      // Draw row background
+      for (let x = 0; x < width; x++) {
+        for (let rowY = y; rowY < y + rowHeight; rowY++) {
+          image.setPixelColor(bgColor, x, rowY);
+        }
+      }
+
+      // Draw cell data
+      headers.forEach((header: string, colIndex: number) => {
+        const x = 20 + colIndex * columnWidth;
+        const value = row?.[header] ?? "";
+        const cellText = String(value).substring(0, 25);
+        image.print(cellFont, x + cellPadding, y + 8, cellText);
+      });
+    });
+
+    // Add footer
+    const footerFont = await Jimp.loadFont(Jimp.FONT_SANS_10_BLACK);
+    const footerText = `Generated: ${generatedDate} | Total records: ${totalRecords.toLocaleString()}`;
+    image.print(footerFont, 20, height - 30, footerText);
+
+    return image;
+  }
+
+  // Helper method to convert hex color to RGB
+  private hexToRgb(hex: string): number {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return 0xffffffff; // Default to white
+    const r = parseInt(result[1], 16);
+    const g = parseInt(result[2], 16);
+    const b = parseInt(result[3], 16);
+    return Jimp.rgbaToInt(r, g, b, 255);
+  }
 
   // Utility method to get export performance stats
   public getExportStats = (req: Request, res: Response): void => {
