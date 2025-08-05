@@ -5,7 +5,10 @@
     "dev": "nodemon src/app.ts",
     "build": "tsc",
     "test": "jest",
-    "benchmark": "node dist/benchmarks/performance.test.js"
+    "benchmark": "node dist/benchmarks/performance.test.js",
+    "deploy": "npm run build && serverless deploy",
+    "deploy:prod": "npm run build && serverless deploy --stage prod",
+    "offline": "serverless offline start"
   },
   "dependencies": {
     "@types/jimp": "^0.2.1",
@@ -23,7 +26,8 @@
     "multer": "^1.4.5-lts.1",
     "pdfkit": "^0.13.0",
     "stream": "^0.0.2",
-    "winston": "^3.10.0"
+    "winston": "^3.10.0",
+    "serverless-http": "^3.2.0"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.7",
@@ -43,6 +47,8 @@
     "nodemon": "^3.0.1",
     "supertest": "^6.3.3",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.3.0"
   }
 }

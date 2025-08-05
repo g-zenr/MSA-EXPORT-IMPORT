@@ -1,0 +1,53 @@
+service: msa-export-import
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 1024
+  timeout: 30
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    MAX_FILE_SIZE: 100mb
+    BATCH_SIZE: 10000
+    WORKER_POOL_SIZE: 2
+    MEMORY_POOL_SIZE: 50
+    MAX_CONCURRENT_JOBS: 5
+    STREAM_HIGH_WATER_MARK: 65536
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::${self:service}-${self:provider.stage}/*"
+
+functions:
+  api:
+    handler: dist/lambda.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+    environment:
+      CORS_ORIGIN: "*"
+    timeout: 30
+    memorySize: 1024
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    noPrependStageInUrl: true 
