@@ -1,0 +1,5 @@
+[33m786c12e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mlambda-serverless[m[33m)[m Remove hardcoded AWS credentials and replace with placeholders
+[33mf76998d[m Add lambda serverless deployment configuration and AWS integration
+[33mc24ee51[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m feat(docker): add multi-stage Docker setup with production, development, and benchmark services, including Nginx reverse proxy and comprehensive README documentation
+[33m7b11f0a[m feat(export): implement user data seeder, HTML and SVG export templates, and enhance export controller for PNG support
+[33m83e6f95[m feat(export): enhance export functionality
