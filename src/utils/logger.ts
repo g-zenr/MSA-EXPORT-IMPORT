@@ -2,8 +2,12 @@ import { createLogger, format, transports, transport } from "winston";
 
 const loggerTransports: transport[] = [new transports.Console()];
 
-// Only add file transports if not running in serverless (Vercel)
-if (process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production") {
+// Only add file transports if not running in serverless environments
+if (
+  process.env.VERCEL !== "1" &&
+  process.env.NODE_ENV !== "production" &&
+  !process.env.AWS_LAMBDA_FUNCTION_NAME
+) {
   loggerTransports.push(
     new transports.File({ filename: "logs/error.log", level: "error" }),
     new transports.File({ filename: "logs/combined.log" })
