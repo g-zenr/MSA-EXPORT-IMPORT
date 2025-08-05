@@ -33,6 +33,7 @@ const importLimiter = rateLimit({
 });
 
 router.use(importLimiter);
+router.post("/", upload.single("file"), importController.importFromCsv);
 router.post("/csv", upload.single("file"), importController.importFromCsv);
 
 export default router;

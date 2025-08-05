@@ -11,6 +11,9 @@ import importRoutes from "./routes/import";
 
 const app: Application = express();
 
+// Trust proxy for API Gateway
+app.set("trust proxy", true);
+
 // Ultra-fast middleware setup
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));

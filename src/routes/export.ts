@@ -13,6 +13,7 @@ const exportLimiter = rateLimit({
 
 router.use(exportLimiter);
 
+router.post("/", validateExportData, exportController.exportToCsv);
 router.post("/csv", validateExportData, exportController.exportToCsv);
 router.post("/pdf", validateExportData, exportController.exportToPdf);
 router.post("/image", validateExportData, exportController.exportToImage);

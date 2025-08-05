@@ -215,7 +215,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/msa-export-import/dev/1754374608453-2025-08-05T06:16:48.453Z/msa-export-import.zip"
+                "S3Key": "serverless/msa-export-import/dev/1754374870409-2025-08-05T06:21:10.409Z/msa-export-import.zip"
               },
               "Handler": "dist/lambda.handler",
               "Runtime": "nodejs18.x",
@@ -245,14 +245,14 @@
               "ApiLogGroup"
             ]
           },
-          "ApiLambdaVersionPrsaLEZcyJiEOxlOE4hzlAj8JLoIkdwbqbIPhFj6g": {
+          "ApiLambdaVersion57AerAYk4ZgsANDFv7zSPz4n5QP0snuu77QgeajqJcc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "81UxGSLSo5NGx7MLtCzqMppFkq18NMlTodw2siQ+3FE="
+              "CodeSha256": "Z0Qd8vmeZVEvG7aqRlQIZ7jzuZr1lOd9dnFqiRzXNqE="
             }
           },
           "HttpApi": {
@@ -360,7 +360,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionPrsaLEZcyJiEOxlOE4hzlAj8JLoIkdwbqbIPhFj6g"
+              "Ref": "ApiLambdaVersion57AerAYk4ZgsANDFv7zSPz4n5QP0snuu77QgeajqJcc"
             },
             "Export": {
               "Name": "sls-msa-export-import-dev-ApiLambdaFunctionQualifiedArn"
@@ -519,7 +519,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionPrsaLEZcyJiEOxlOE4hzlAj8JLoIkdwbqbIPhFj6g"
+        "versionLogicalId": "ApiLambdaVersion57AerAYk4ZgsANDFv7zSPz4n5QP0snuu77QgeajqJcc"
       }
     },
     "configValidationMode": "warn",
@@ -545,7 +545,7 @@
     "artifact": "C:\\Users\\Renz\\Documents\\GitHub\\MSA-EXPORT-IMPORT\\.serverless\\msa-export-import.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/msa-export-import/dev/1754374608453-2025-08-05T06:16:48.453Z",
+    "artifactDirectoryName": "serverless/msa-export-import/dev/1754374870409-2025-08-05T06:21:10.409Z",
     "artifact": "msa-export-import.zip"
   }
 }
