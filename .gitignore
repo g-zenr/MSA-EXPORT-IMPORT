@@ -16,8 +16,6 @@ build/
 *.tsbuildinfo
 
 # Environment files
-.env
-.env.*
 
 # OS files
 .DS_Store
@@ -27,3 +25,4 @@ Thumbs.db
 coverage/
 .idea/
 .vscode/ 
+config.bat

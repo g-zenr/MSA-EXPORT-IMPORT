@@ -171,6 +171,61 @@ MSA/
 
 ---
 
+## AWS EC2 Deployment
+
+This project includes comprehensive AWS EC2 deployment setup with automated infrastructure provisioning.
+
+### Quick Deployment
+
+1. **Prerequisites**:
+
+   - AWS CLI installed and configured
+   - AWS account with appropriate permissions
+
+2. **Deploy to EC2**:
+
+   ```bash
+   # Make deployment script executable
+   chmod +x aws/deploy.sh
+
+   # Run deployment
+   ./aws/deploy.sh
+   ```
+
+3. **Cleanup** (when needed):
+   ```bash
+   chmod +x aws/cleanup.sh
+   ./aws/cleanup.sh
+   ```
+
+### Manual Deployment
+
+For manual deployment, follow the detailed guide in [`aws-ec2-setup.md`](aws-ec2-setup.md).
+
+### Infrastructure Components
+
+- **EC2 Instance**: t3.micro (free tier eligible)
+- **Security Group**: Configured for HTTP, HTTPS, SSH, and application port
+- **IAM Role**: With CloudWatch and SSM permissions
+- **CloudWatch Logs**: Centralized logging
+- **Nginx**: Reverse proxy for the application
+
+### Cost Estimation
+
+- **t3.micro**: ~$8-12/month (free tier eligible for first 12 months)
+- **Data Transfer**: Minimal for typical usage
+- **CloudWatch**: Free tier includes 5GB/month
+
+### Security Features
+
+- Non-root user execution
+- IAM roles instead of access keys
+- Security group restrictions
+- SSL/TLS ready configuration
+- Regular security updates
+
+---
+
 ## License
 
 This project is licensed under the MIT License.
